@@ -140,6 +140,14 @@ int ccm_encrypt(ccm_t *input)
      }
      printf("\n");
      return 0;
+
+/* free memory */
+     for (i=0; i < num_blocks; i++) 
+	  free (blocks[i]);
+     free (blocks);
+     for (i=0; i < num_ctr; i++)
+	  free (ctr[i]);
+     free (ctr);     
 }
 
 void print_block(unsigned char *block)
@@ -279,7 +287,5 @@ void format(ccm_t *input, unsigned char **blocks, int num_blocks, unsigned char 
 	  long_i = htobe64(long_i); // convert long i to big endian
 	  memcpy(&ctr[i][1]+n_len, &long_i, q);  //copy i to ctr block
      }
-
-   
-     printf("\nNum Bocks: %d\n", num_blocks);
+  
 }
