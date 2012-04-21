@@ -15,12 +15,16 @@
 int ccm_encrypt(unsigned char *c, int *c_len, ccm_t *input)
 {
      unsigned char *key = input -> key;
+     //   unsigned char *adata = input -> adata;
      unsigned char *payload = input -> payload;
+     unsigned char *nonce = input -> nonce;
      unsigned long a_len = input -> a_len;
+     unsigned long n_len = input -> n_len;
      unsigned long p_len = input -> p_len;
      int t_len = input -> t_len;
      int extrabytes, i;
      unsigned char **blocks, **ctr;
+     unsigned char flags = 0;
      AES_KEY aes_key;
 
      /* determine number of blocks to allocate */
@@ -32,7 +36,7 @@ int ccm_encrypt(unsigned char *c, int *c_len, ccm_t *input)
 	  else 
 	       extrabytes=10;
      }
-     int num_ctr = 1 +  ((p_len + 15) / 16);
+     int num_ctr = 1 + ((p_len + 15) / 16);
      int num_blocks = ((a_len + extrabytes + 15) / 16) + num_ctr;
 
      /* allocate input blocks */
@@ -55,9 +59,36 @@ int ccm_encrypt(unsigned char *c, int *c_len, ccm_t *input)
 	       fatal("Error allocating memory for input blocks.");
      }
 
+     /* set a_len bit of flag (1 if there's any a_data, 0 otherwise)*/
+     if (a_len)
+	  flags = 0b1 << 6;
+
+     /* set 3 t-bits of flag */
+     unsigned int t = (t_len-2)/2;
+     flags = flags | (t << 3);
+
+     /* set 3 q-bits of flag */
+     unsigned int q = 15 - n_len;
+     flags = flags | (q-1);
+
+     /* check that we have enough bits to store payload length */
+     uint64_t q_temp = p_len;
+     int q_min = 0;
+     while (q_temp >>= 1)
+	  q_min++;
+     q_min = (q_min+7)/8;
+     printf("\nqmin: %d",q_min);
+     if ( q < q_min)
+	  fatal("Nonce is too long for payload size.");
 
      /* Format Blocks */
-     format(input, blocks, num_blocks, ctr, num_ctr);
+     format(input, blocks, num_blocks, flags);
+
+     /* reset flags for counter blocks */
+     flags = flags & 0b00000111;
+
+     /* generate CTR blocks */
+     gen_ctr(ctr, num_ctr, nonce, n_len, flags);
 
      if (AES_set_encrypt_key(key, 128, &aes_key))
 	  fatal("Error initializing AES key.");
@@ -100,8 +131,8 @@ int ccm_encrypt(unsigned char *c, int *c_len, ccm_t *input)
 	  AES_encrypt(ctr[i], s[i], &aes_key);
 
 /* --calculate ciphertext-- */
-     c_len = p_len + t_len;
-     c = malloc(c_len);
+     *c_len = p_len + t_len;
+     c = malloc(*c_len);
      if (!c)
 	  fatal("Error allocating memory for ciphertext.");
      for (i=0; i < p_len; i++) 
@@ -136,7 +167,7 @@ int ccm_encrypt(unsigned char *c, int *c_len, ccm_t *input)
      }
      printf("\n");
      printf("C:\t");
-     for (i=0; i < c_len; i++) {
+     for (i=0; i < *c_len; i++) {
 	  printf("%02x", c[i]);
 	  if (!((i+1) % 4))
 	       printf(" ");
@@ -165,45 +196,22 @@ void print_block(unsigned char *block)
      printf("\n");
 }
      
-void format(ccm_t *input, unsigned char **blocks, int num_blocks, unsigned char **ctr, int num_ctr)
+void format(ccm_t *input, unsigned char **blocks, int num_blocks, unsigned char flags)
 {
+     int q = (flags & 0b00000111);
      unsigned char *adata = input -> adata;
      unsigned char *payload = input -> payload;
      unsigned char *nonce = input -> nonce;
      unsigned long a_len = input -> a_len;
      unsigned long n_len = input -> n_len;
      unsigned long p_len = input -> p_len;
-     int t_len = input -> t_len;
-     unsigned char flags = 0;
+     //    int t_len = input -> t_len;
      int cur_block = 1;
      uint64_t a_len_be, p_len_be, p_len_temp; //temp storage for big endian
      int nextbyte;
      int i;
-
-     /* set a bit of flag (1 if there's any a_data, 0 otherwise)*/
-     if (a_len)
-	  flags = 0b1 << 6;
-
-     /* set 3 t-bits of flag */
-     unsigned int t = (t_len-2)/2;
-     flags = flags | (t << 3);
-
-     /* set 3 q-bits of flag */
-     unsigned int q = 15 - n_len;
-     flags = flags | (q-1);
-
-     /* check that we have enough bits to store payload length */
-     uint64_t q_temp = p_len;
-     int q_min = 0;
-     while (q_temp >>= 1)
-	  q_min++;
-     q_min = (q_min+7)/8;
-     printf("\nqmin: %d",q_min);
-     if ( q < q_min)
-	  fatal("Nonce is too long for payload size.");
      
      blocks[0][0] = flags;
-
 
      memcpy(&blocks[0][1], nonce, n_len); //copy nonce to block
 
@@ -278,10 +286,14 @@ void format(ccm_t *input, unsigned char **blocks, int num_blocks, unsigned char 
      }
      
      
-/* -- format counter blocks -- */
-/* reset flags for counter blocks */
-     flags = flags & 0b00000111;
 
+  
+}
+
+void gen_ctr(unsigned char **ctr, int num_ctr, unsigned char *nonce, unsigned long n_len, unsigned char flags)
+{
+     int i;
+     int q = flags+1;
      uint64_t long_i; //temporary long buffer for i
      for (i=0; i < num_ctr; i++) {
 	  ctr[i][0] = flags;
@@ -291,5 +303,15 @@ void format(ccm_t *input, unsigned char **blocks, int num_blocks, unsigned char 
 	  long_i = htobe64(long_i); // convert long i to big endian
 	  memcpy(&ctr[i][1]+n_len, &long_i, q);  //copy i to ctr block
      }
-  
+}
+
+int ccm_decrypt(unsigned char *payload, int *p_len, ccm_decrypt_t *input)
+{
+     unsigned char *adata = input -> adata;
+     unsigned char *c = input -> ciphertext;
+     unsigned char *nonce = input -> nonce;
+     unsigned long a_len = input -> a_len;
+     unsigned long n_len = input -> n_len;
+     int c_len = input -> c_len;
+     int t_len = input -> t_len;
 }
