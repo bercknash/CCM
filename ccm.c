@@ -12,7 +12,7 @@
 #include <openssl/aes.h>
 #include "ccm.h"
 
-int ccm_encrypt(ccm_t *input)
+int ccm_encrypt(unsigned char *c, int *c_len, ccm_t *input)
 {
      unsigned char *key = input -> key;
      unsigned char *payload = input -> payload;
@@ -100,7 +100,10 @@ int ccm_encrypt(ccm_t *input)
 	  AES_encrypt(ctr[i], s[i], &aes_key);
 
 /* --calculate ciphertext-- */
-     unsigned char c[p_len+t_len];
+     c_len = p_len + t_len;
+     c = malloc(c_len);
+     if (!c)
+	  fatal("Error allocating memory for ciphertext.");
      for (i=0; i < p_len; i++) 
 	  c[i] = payload[i] ^ s[1][i];
 
@@ -133,21 +136,22 @@ int ccm_encrypt(ccm_t *input)
      }
      printf("\n");
      printf("C:\t");
-     for (i=0; i < t_len+p_len; i++) {
+     for (i=0; i < c_len; i++) {
 	  printf("%02x", c[i]);
 	  if (!((i+1) % 4))
 	       printf(" ");
      }
      printf("\n");
-     return 0;
-
+    
 /* free memory */
      for (i=0; i < num_blocks; i++) 
 	  free (blocks[i]);
      free (blocks);
      for (i=0; i < num_ctr; i++)
 	  free (ctr[i]);
-     free (ctr);     
+     free (ctr);
+    
+     return 0;
 }
 
 void print_block(unsigned char *block)
@@ -193,7 +197,7 @@ void format(ccm_t *input, unsigned char **blocks, int num_blocks, unsigned char 
      int q_min = 0;
      while (q_temp >>= 1)
 	  q_min++;
-     q_min /= 8;
+     q_min = (q_min+7)/8;
      printf("\nqmin: %d",q_min);
      if ( q < q_min)
 	  fatal("Nonce is too long for payload size.");

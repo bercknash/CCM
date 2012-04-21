@@ -4,7 +4,7 @@ typedef struct {
      int t_len;
 } ccm_t;
 
-int ccm_encrypt(ccm_t*);
+int ccm_encrypt(unsigned char*, int*, ccm_t*);
 void print_block(unsigned char*);
 void format(ccm_t*, unsigned char **, int, unsigned char **, int);
 

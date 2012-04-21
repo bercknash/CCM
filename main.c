@@ -152,6 +152,8 @@ int main(int argc,char *argv[]){
      printf("size of payload: %lu bytes\n", input.p_len);
      printf("size of nonce: %lu bytes\n", input.n_len);
 
-     ccm_encrypt(&input);
+     unsigned char *ciphertext=NULL;
+     int c_len;
+     ccm_encrypt(ciphertext, &c_len, &input);
      return 0;
 }
