@@ -152,9 +152,9 @@ int main(int argc,char *argv[]){
      printf("size of payload: %lu bytes\n", input.p_len);
      printf("size of nonce: %lu bytes\n", input.n_len);
 
-     unsigned char *ciphertext = NULL;
+     unsigned char *ciphertext;
      int c_len;
-     ccm_encrypt(ciphertext, &c_len, &input);
+     ciphertext = ccm_encrypt(&c_len, &input);
 
      /* copy associated data, key, nonce, and ciphertext to struct for decryption */
      ccm_decrypt_t output;
@@ -167,8 +167,11 @@ int main(int argc,char *argv[]){
      output.ciphertext = ciphertext;
      output.c_len = c_len;
 
-     unsigned char *output_payload = NULL;
+     unsigned char *output_payload;
      int output_p_len = 0;
-     //   ccm_decrypt(output_payload, &output_p_len, output);
+
+     output_payload = ccm_decrypt (&output_p_len, &output);
+     if (output_payload != NULL)
+	  printf("Decryption verified!");
      return 0;
 }
