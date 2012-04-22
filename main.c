@@ -15,7 +15,7 @@
           printf("%s --adata|-a ASSOCIATED_DATA_FILE\n",argv[0]);	\
           printf("--key|-k KEY_FILE\n");				\
           printf("--payload|-p PAYLOAD_FILE\n");			\
-	  printf("--t_len|-t MAC_LENGTH");				\
+	  printf("--t_len|-t MAC_LENGTH\n");				\
      }                                                                  \
 
 int main(int argc,char *argv[]){
@@ -25,7 +25,8 @@ int main(int argc,char *argv[]){
      char *key_filename = NULL;
      char *payload_filename = NULL;
      char *nonce_filename = NULL;
-     int opt, option_index, t_len;
+     int opt, option_index;
+     int t_len = 8;
 
      ccm_t input;
      uint64_t key_len;
@@ -169,6 +170,15 @@ int main(int argc,char *argv[]){
 
      unsigned char *output_payload;
      int output_p_len = 0;
+     int i;
+     printf("\n");
+	  printf("C:\t");
+	  for (i=0; i < c_len; i++) {
+	       printf("%02x", ciphertext[i]);
+	       if (!((i+1) % 4))
+		    printf(" ");
+	  }
+	  printf("\n");
 
      output_payload = ccm_decrypt (&output_p_len, &output);
      if (output_payload != NULL)
