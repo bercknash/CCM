@@ -180,7 +180,7 @@ int main(int argc,char *argv[]){
 	  }
 	  printf("\n");
 
-     output_payload = ccm_decrypt (&output_p_len, &output);
+	  //   output_payload = ccm_decrypt (&output_p_len, &output);
      if (output_payload != NULL)
 	  printf("Decryption verified!");
      return 0;

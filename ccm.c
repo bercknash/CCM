@@ -38,8 +38,8 @@ unsigned char* ccm_encrypt(int *c_len, ccm_t *input)
 	  else 
 	       extrabytes=10;
      }
-     int num_ctr = 1 + ((p_len + 15) / 16);
-     int num_blocks = ((a_len + extrabytes + 15) / 16) + num_ctr;
+     unsigned long num_ctr = 1 + ((p_len + 15) / 16);
+     unsigned long num_blocks = ((a_len + extrabytes + 15) / 16) + num_ctr;
 
      /* allocate input blocks */
      blocks = calloc(num_blocks, sizeof(char*));
@@ -127,7 +127,15 @@ unsigned char* ccm_encrypt(int *c_len, ccm_t *input)
      free(ybuff);
 
 /* --calculate S blocks -- */
-     unsigned char s[num_ctr][16];
+     unsigned char **s;
+     s = calloc(num_ctr, sizeof(char*));
+     if (!s)
+	  fatal("Error allocating memory for S blocks.");
+     for (i=0; i < num_ctr; i++) {
+	  s[i] = malloc(16);
+	  if (!s[i])
+	       fatal("Error allocating memory for S blocks.");
+     }
      for (i=0; i < num_ctr; i++)
 	  AES_encrypt(ctr[i], s[i], &aes_key);
 
@@ -212,7 +220,7 @@ void print_block(unsigned char *block)
      printf("\n");
 }
      
-void format(ccm_t *input, unsigned char **blocks, int num_blocks, unsigned char flags)
+void format(ccm_t *input, unsigned char **blocks, unsigned long num_blocks, unsigned char flags)
 {
      int q = (flags & 0b00000111) + 1;
      unsigned char *adata = input -> adata;
@@ -335,11 +343,11 @@ unsigned char* ccm_decrypt(int *p_len, ccm_decrypt_t *input)
      int extrabytes;
      AES_KEY aes_key;
 
-     int i;
+     long i;
      if (c_len <= t_len)
 	  return NULL;
 
-     int num_ctr = (c_len - t_len + 15) / 16 + 1;
+     unsigned long num_ctr = (c_len - t_len + 15) / 16 + 1;
  
      /* allocate counter blocks */
      ctr = calloc(num_ctr, sizeof(char*));
@@ -362,7 +370,17 @@ unsigned char* ccm_decrypt(int *p_len, ccm_decrypt_t *input)
 	  fatal("Error initializing AES key.");
 
 /* --calculate S blocks -- */
-     unsigned char s[num_ctr][16];
+
+     unsigned char **s;
+     s = calloc(num_ctr, sizeof(char*));
+     if (!s)
+	  fatal("Error allocating memory for S blocks.");
+     for (i=0; i < num_ctr; i++) {
+	  s[i] = malloc(16);
+	  if (!s[i])
+	       fatal("Error allocating memory for S blocks.");
+     }
+     
      for (i=0; i < num_ctr; i++)
 	  AES_encrypt(ctr[i], s[i], &aes_key);
 
@@ -411,7 +429,7 @@ unsigned char* ccm_decrypt(int *p_len, ccm_decrypt_t *input)
 	  else 
 	       extrabytes=10;
      }
-     int num_blocks = ((a_len + extrabytes + 15) / 16) + num_ctr;
+     unsigned long num_blocks = ((a_len + extrabytes + 15) / 16) + num_ctr;
 
      /* allocate input blocks */
      blocks = calloc(num_blocks, sizeof(char*));
@@ -477,12 +495,12 @@ unsigned char* ccm_decrypt(int *p_len, ccm_decrypt_t *input)
 	  printf("\n");
 	  printf("\n");
 	  for (i=0; i < num_ctr; i++) {
-	       printf("C%d:\t", i);
+	       printf("C%lu:\t", i);
 	       print_block(ctr[i]);
 	  }
 	  printf("\n");
 	  for (i=0; i < num_ctr; i++) {
-	       printf("S%d:\t", i);
+	       printf("S%lu:\t", i);
 	       print_block(s[i]);
 	  }
 	  printf("\n");
@@ -503,7 +521,7 @@ unsigned char* ccm_decrypt(int *p_len, ccm_decrypt_t *input)
 
 	  printf("\n");
 	  for (i=0; i < num_blocks; i++) {
-	       printf("B%d:\t", i);
+	       printf("B%lu:\t", i);
 	       print_block(blocks[i]);
 	  }
      }
