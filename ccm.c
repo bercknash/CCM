@@ -205,6 +205,9 @@ unsigned char* ccm_encrypt(int *c_len, ccm_t *input)
      for (i=0; i < num_ctr; i++)
 	  free (ctr[i]);
      free (ctr);
+     for (i=0; i < num_ctr; i++)
+	  free (s[i]);
+     free (s);
     
      return c;
 }
@@ -526,5 +529,16 @@ unsigned char* ccm_decrypt(int *p_len, ccm_decrypt_t *input)
 	  }
      }
 
+/* free memory */
+     for (i=0; i < num_blocks; i++) 
+	  free (blocks[i]);
+     free (blocks);
+     for (i=0; i < num_ctr; i++)
+	  free (ctr[i]);
+     free (ctr);
+     for (i=0; i < num_ctr; i++)
+	  free (s[i]);
+     free (s);
+    
      return p;
 }
