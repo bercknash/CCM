@@ -11,12 +11,15 @@ DEPS    := ${SRCS:.c=.dep}
 XDEPS   := $(wildcard ${DEPS})
 
 CC = gcc
-CCFLAGS = -Wall -ggdb 
+CCFLAGS = -Wall -O2
 LDFLAGS = -lcrypto
 LIBS    =
 
-.PHONY: all clean
+.PHONY: all clean debug
 all:: ${TARGET}
+
+debug: CCFLAGS = -DDEBUG -ggdb -Wall
+debug: ${TARGET}
 
 ifneq (${XDEPS},)
 include ${XDEPS}

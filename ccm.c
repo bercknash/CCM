@@ -11,19 +11,18 @@
 #include <stdint.h>
 #include <openssl/aes.h>
 #include "ccm.h"
-#define DEBUG 0
 
 unsigned char* ccm_encrypt(int *c_len, ccm_t *input)
 {
      unsigned char *key = input -> key;
-     //   unsigned char *adata = input -> adata;
      unsigned char *payload = input -> payload;
      unsigned char *nonce = input -> nonce;
      unsigned long a_len = input -> a_len;
      unsigned long n_len = input -> n_len;
      unsigned long p_len = input -> p_len;
      int t_len = input -> t_len;
-     int extrabytes, i;
+     int extrabytes = 0;
+     int i;
      unsigned char **blocks, **ctr;
      unsigned char flags = 0;
      unsigned char *c; //ciphertext
@@ -164,39 +163,39 @@ unsigned char* ccm_encrypt(int *c_len, ccm_t *input)
 	  *(c+p_len+i) = *(tag+i) ^ *(s[0]+i);
 
 /* debug prints */
-     if (DEBUG) {
-	  printf("\n");
-	  for (i=0; i < num_blocks; i++) {
-	       printf("B%d:\t", i);
-	       print_block(blocks[i]);
-	  }
-	  printf("\n");
-	  for (i=0; i < num_ctr; i++) {
-	       printf("C%d:\t", i);
-	       print_block(ctr[i]);
-	  }
-	  printf("\n");
-	  printf("T:\t");
-	  for (i=0; i < t_len; i++) {
-	       printf("%02x", tag[i]);
-	       if (!((i+1) % 4))
-		    printf(" ");
-	  }
-	  printf("\n");
-	  printf("\n");
-	  for (i=0; i < num_ctr; i++) {
-	       printf("S%d:\t", i);
-	       print_block(s[i]);
-	  }
-	  printf("\n");
-	  printf("C:\t");
-	  for (i=0; i < *c_len; i++) {
-	       printf("%02x", c[i]);
-	       if (!((i+1) % 4))
-		    printf(" ");
-	  }
-	  printf("\n");
+#ifdef DEBUG
+     printf("\n");
+     for (i=0; i < num_blocks; i++) {
+	  printf("B%d:\t", i);
+	  print_block(blocks[i]);
      }
+     printf("\n");
+     for (i=0; i < num_ctr; i++) {
+	  printf("C%d:\t", i);
+	  print_block(ctr[i]);
+     }
+     printf("\n");
+     printf("T:\t");
+     for (i=0; i < t_len; i++) {
+	  printf("%02x", tag[i]);
+	  if (!((i+1) % 4))
+	       printf(" ");
+     }
+     printf("\n");
+     printf("\n");
+     for (i=0; i < num_ctr; i++) {
+	  printf("S%d:\t", i);
+	  print_block(s[i]);
+     }
+     printf("\n");
+     printf("C:\t");
+     for (i=0; i < *c_len; i++) {
+	  printf("%02x", c[i]);
+	  if (!((i+1) % 4))
+	       printf(" ");
+     }
+     printf("\n");
+#endif
     
 /* free memory */
      for (i=0; i < num_blocks; i++) 
@@ -343,7 +342,7 @@ unsigned char* ccm_decrypt(int *p_len, ccm_decrypt_t *input)
      unsigned char flags = 0;
      unsigned char *key = input -> key;
      unsigned char *p;
-     int extrabytes;
+     int extrabytes = 0;
      AES_KEY aes_key;
 
      long i;
@@ -393,7 +392,7 @@ unsigned char* ccm_decrypt(int *p_len, ccm_decrypt_t *input)
      if (!p)
 	  fatal("Error allocating memory for payload.");
 
-    /* decrypt (XOR) 64 bits at a time when possible */
+     /* decrypt (XOR) 64 bits at a time when possible */
      int p_rem = *p_len;
      i = 0;
      while (p_rem >= 8) {
@@ -487,47 +486,47 @@ unsigned char* ccm_decrypt(int *p_len, ccm_decrypt_t *input)
      if (memcmp(tag, new_tag, t_len))
 	  return NULL;
 
-     if (DEBUG) {
-	  printf("\n");
-	  printf("C:\t");
-	  for (i=0; i < c_len; i++) {
-	       printf("%02x", c[i]);
-	       if (!((i+1) % 4))
-		    printf(" ");
-	  }
-	  printf("\n");
-	  printf("\n");
-	  for (i=0; i < num_ctr; i++) {
-	       printf("C%lu:\t", i);
-	       print_block(ctr[i]);
-	  }
-	  printf("\n");
-	  for (i=0; i < num_ctr; i++) {
-	       printf("S%lu:\t", i);
-	       print_block(s[i]);
-	  }
-	  printf("\n");
-	  printf("P:\t");
-	  for (i=0; i < *p_len; i++) {
-	       printf("%02x", p[i]);
-	       if (!((i+1) % 4))
-		    printf(" ");
-	  }
-	  printf("\n");
-	  printf("T:\t");
-	  for (i=0; i < t_len; i++) {
-	       printf("%02x", tag[i]);
-	       if (!((i+1) % 4))
-		    printf(" ");
-	  }
-	  printf("\n");
-
-	  printf("\n");
-	  for (i=0; i < num_blocks; i++) {
-	       printf("B%lu:\t", i);
-	       print_block(blocks[i]);
-	  }
+#ifdef DEBUG
+     printf("\n");
+     printf("C:\t");
+     for (i=0; i < c_len; i++) {
+	  printf("%02x", c[i]);
+	  if (!((i+1) % 4))
+	       printf(" ");
      }
+     printf("\n");
+     printf("\n");
+     for (i=0; i < num_ctr; i++) {
+	  printf("C%lu:\t", i);
+	  print_block(ctr[i]);
+     }
+     printf("\n");
+     for (i=0; i < num_ctr; i++) {
+	  printf("S%lu:\t", i);
+	  print_block(s[i]);
+     }
+     printf("\n");
+     printf("P:\t");
+     for (i=0; i < *p_len; i++) {
+	  printf("%02x", p[i]);
+	  if (!((i+1) % 4))
+	       printf(" ");
+     }
+     printf("\n");
+     printf("T:\t");
+     for (i=0; i < t_len; i++) {
+	  printf("%02x", tag[i]);
+	  if (!((i+1) % 4))
+	       printf(" ");
+     }
+     printf("\n");
+
+     printf("\n");
+     for (i=0; i < num_blocks; i++) {
+	  printf("B%lu:\t", i);
+	  print_block(blocks[i]);
+     }
+#endif
 
 /* free memory */
      for (i=0; i < num_blocks; i++) 
